@@ -40,12 +40,12 @@ function DataPage() {
     const [sortKey, setSortKey] = useState<keyof Row>('pct');
     const [sortAsc, setSortAsc] = useState<boolean>(false);
 
-    const nameToId = useMemo(() => {
-        if (!spells) return {};
+    const nameToIconUrl = useMemo(() => {
+        if (!spells) return {} as Record<string, string>;
         const m: Record<string, string> = {};
         spells.forEach((s) => {
             s.names.forEach((n) => {
-                m[n] = s.id;
+                m[n] = s.iconUrl;
             });
         });
         return m;
@@ -201,15 +201,15 @@ function DataPage() {
                                 <td style={cellStyle}>
                                     {r.topWrong.length > 0
                                         ? r.topWrong.map(([g, c]) => {
-                                            const imgId = nameToId[g];
+                                            const iconUrl = nameToIconUrl[g];
                                             return (
                                                 <span
                                                     key={g}
                                                     style={{ display: 'inline-flex', alignItems: 'center', marginRight: 8 }}
                                                 >
-                                                    {imgId && (
+                                                    {iconUrl && (
                                                         <img
-                                                            src={r.iconUrl}
+                                                            src={iconUrl}
                                                             alt={g}
                                                             width={20}
                                                             height={20}
