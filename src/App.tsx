@@ -209,7 +209,6 @@ export default function App() {
           position: 'fixed',
           bottom: 16,
           left: 60,
-          padding: '4px',
           background: 'transparent',
           borderRadius: 4,
           zIndex: 1000,
@@ -220,8 +219,8 @@ export default function App() {
           alt="WoW Quiz"
           style={{
             display: 'block',
-            width: 20,
-            height: 20,
+            width: 26,
+            height: 26,
           }}
         />
       </a>
