@@ -1,22 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { fetchAllSpells } from '../lib/supabase';
 import type { Spell } from '../components/IconQuiz';
+import useSWR from 'swr'
 
-export function useAllSpells() {
-    const [spells, setSpells] = useState<Spell[] | null>(null);
+
+export function useAllSpells(): Spell[] | undefined {
+    const { data: spells, error } = useSWR<Spell[]>(
+        'all-spells',
+        fetchAllSpells,
+        {
+            revalidateOnFocus: false,
+            dedupingInterval: 1000 * 60 * 60,
+        }
+    )
+
     useEffect(() => {
-        fetchAllSpells()
-            .then((data) => {
-                setSpells(data)
-                data.forEach((s) => {
-                    const img = new Image()
-                    img.src = `/api/image/${s.id}`
-                })
-            })
-            .catch((err) => {
-                console.error('Failed to load spells from DB', err);
-                setSpells([]);
-            });
-    }, []);
-    return spells;
+        if (!spells) return
+        spells.forEach((s) => {
+            const img = new Image()
+            img.src = `/api/image/${s.id}`
+        })
+    }, [spells])
+
+    if (error) {
+        console.error('Failed to load spells', error)
+        return []
+    }
+    return spells
 }

@@ -8,7 +8,7 @@ import {
 } from 'react';
 import Fuse from 'fuse.js';
 import { useAllSpells } from '../hooks/useAllSpells';
-import { recordGuess } from '../lib/supabase';
+import { recordGuessBatch, Guess } from '../lib/supabase'
 
 export type Spell = {
     id: string;
@@ -28,6 +28,7 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(10);
     const [guess, setGuess] = useState('');
+    const pendingGuesses = useRef<Guess[]>([])
 
     const spells = useAllSpells();
     const allNames = useMemo(() => {
@@ -143,11 +144,13 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
     useEffect(() => {
         if (lives <= 0 && item) {
             spawnMessage(spell.names[0], 'wrong');
+            recordGuessBatch(pendingGuesses.current)
             onGameOver(score, lockMode!);
         }
     }, [lives, item]);
 
     const makeGuess = (value: string) => {
+        if (lives <= 0) return
         if (!lockMode) lockIt();
         if (!item) return;
         const match = spell.names.find(
@@ -155,12 +158,20 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
         );
         if (match) {
             spawnMessage(spell.names[0], 'correct');
-            recordGuess(spell.names[0], value, true);
+            pendingGuesses.current.push({
+                spellname: spell.names[0],
+                userguess: value,
+                iscorrect: true
+            });
             setScore((s) => s + 1);
             pickNextSpell();
         } else {
             spawnMessage(value, 'wrong');
-            recordGuess(spell.names[0], value, false);
+            pendingGuesses.current.push({
+                spellname: spell.names[0],
+                userguess: value,
+                iscorrect: false
+            });
             setWrongs((ws) => [...ws, value]);
             setLives((l) => l - 1);
             setAvailNames((a) => a.filter((n) => n !== value));
@@ -169,6 +180,7 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
     };
 
     const onPass = () => {
+        if (lives <= 0) return
         if (!lockMode) lockIt();
         if (!item) return;
         setLives((l) => l - 1);
@@ -217,7 +229,7 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
     if (spells === null) {
         return <p style={{ color: '#eee', textAlign: 'center' }}>Loading spells…</p>;
     }
-    
+
     if (!item) return null
     const { spell, rotation } = item
     return (

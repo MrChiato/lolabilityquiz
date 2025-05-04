@@ -62,16 +62,18 @@ export async function submitScore(name: string, score: number, mode: string) {
     await fetchLeaderboard(mode);
 }
 
-export async function recordGuess(spellName: string, userGuess: string, isCorrect: boolean) {
-    const { error } = await supabase.rpc('update_lol_spell_stats', {
-        spellname: spellName,
-        iscorrect: isCorrect,
-        userguess: userGuess,
-    });
+export type Guess = {
+    spellname: string
+    userguess: string
+    iscorrect: boolean
+}
 
-    if (error) {
-        console.error('Failed to update spell stats', error);
-    }
+export async function recordGuessBatch(guesses: Guess[]) {
+    if (guesses.length === 0) return
+    const { error } = await supabase.rpc('update_spell_stats_batch', {
+        batch: guesses
+    })
+    if (error) console.error('Batch update failed', error)
 }
 
 export async function fetchAllSpells(): Promise<Spell[]> {
