@@ -70,7 +70,7 @@ export type Guess = {
 
 export async function recordGuessBatch(guesses: Guess[]) {
     if (guesses.length === 0) return
-    const { error } = await supabase.rpc('update_spell_stats_batch', {
+    const { error } = await supabase.rpc('update_lol_spell_stats_batch', {
         batch: guesses
     })
     if (error) console.error('Batch update failed', error)
