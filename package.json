@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "name": "lol-ability-quiz",
   "private": false,
@@ -42,3 +43,49 @@
     "vite": "^6.3.1"
   }
 }
+=======
+{
+  "name": "lol-ability-quiz",
+  "private": false,
+  "version": "0.0.0",
+  "type": "module",
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "*"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "generate": "node scripts/generateSpells.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "fuse.js": "^7.1.0",
+    "node-fetch": "^2.7.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.5.3",
+    "supabase": "^2.22.6",
+    "uuid": "^11.1.0",
+    "vercel": "^41.7.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/node": "^22.15.3",
+    "@types/node-fetch": "^2.6.12",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.26.1",
+    "vite": "^6.3.1"
+  }
+}
+>>>>>>> 156f4a47dea51c9716f470f617c9c26b0b5cf27b

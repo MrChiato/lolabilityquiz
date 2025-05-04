@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .tableWrapper {
     width: 100%;
     overflow-x: auto;
@@ -31,4 +32,39 @@
       max-width: none;
     }
   }
+=======
+.tableWrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+  
+  .tableWrapper table {
+    min-width: 600px;
+  }
+  
+  .leaderboards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 16px;
+    padding: 16px;
+    height: 80%;
+  }
+  
+  .modeBoard {
+    flex: 1 1 300px;
+    max-width: 300px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  
+  @media (max-width: 600px) {
+    .modeBoard {
+      flex: 1 1 100%;
+      max-width: none;
+    }
+  }
+>>>>>>> 156f4a47dea51c9716f470f617c9c26b0b5cf27b
   
