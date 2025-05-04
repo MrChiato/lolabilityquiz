@@ -63,7 +63,7 @@ export async function submitScore(name: string, score: number, mode: string) {
 }
 
 export async function recordGuess(spellName: string, userGuess: string, isCorrect: boolean) {
-    const { error } = await supabase.rpc('update_spell_stats', {
+    const { error } = await supabase.rpc('update_lol_spell_stats', {
         spellname: spellName,
         iscorrect: isCorrect,
         userguess: userGuess,
