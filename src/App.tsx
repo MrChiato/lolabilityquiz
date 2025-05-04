@@ -201,6 +201,31 @@ export default function App() {
         ☕
       </a>
 
+      <a
+        href="https://www.wowabilityquiz.com"
+        target="_blank"
+        rel="noopener"
+        style={{
+          position: 'fixed',
+          bottom: 16,
+          left: 60,
+          padding: '4px',
+          background: 'transparent',
+          borderRadius: 4,
+          zIndex: 1000,
+        }}
+      >
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/e/eb/WoW_icon.svg"
+          alt="WoW Quiz"
+          style={{
+            display: 'block',
+            width: 20,
+            height: 20,
+          }}
+        />
+      </a>
+
       {isFeedbackOpen && (
         <FeedbackModal
           onClose={() => setFeedbackOpen(false)}
