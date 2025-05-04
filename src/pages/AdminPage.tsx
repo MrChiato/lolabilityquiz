@@ -290,7 +290,7 @@ export default function AdminPage() {
                             <tr key={s.id} style={{ borderBottom: '1px solid #333' }}>
                                 <td style={{ padding: 8 }}>
                                     <img
-                                        src={`/api/image/${s.id}`}
+                                        src={s.icon_url}
                                         width={32} height={32}
                                         style={{ objectFit: 'contain', borderRadius: 4 }}
                                     />

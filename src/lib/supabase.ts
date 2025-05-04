@@ -86,7 +86,7 @@ export async function fetchAllSpells(): Promise<Spell[]> {
     return data.map((s) => ({
         id: s.id,
         names: s.names,
-        iconUrl: `/api/image/${s.id}`,
+        iconUrl: s.iconUrl,
         hint: s.hint,
         description: s.description,
         difficulty: s.difficulty,

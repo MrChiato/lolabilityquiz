@@ -186,7 +186,7 @@ function DataPage() {
                             >
                                 <td style={cellCenter}>
                                     <img
-                                        src={`/api/image/${r.id}`}
+                                        src={r.iconUrl}
                                         alt={r.names[0]}
                                         width={32}
                                         height={32}
@@ -209,7 +209,7 @@ function DataPage() {
                                                 >
                                                     {imgId && (
                                                         <img
-                                                            src={`/api/image/${imgId}`}
+                                                            src={r.iconUrl}
                                                             alt={g}
                                                             width={20}
                                                             height={20}
