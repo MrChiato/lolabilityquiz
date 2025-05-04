@@ -18,7 +18,7 @@ export function useAllSpells(): Spell[] | undefined {
         if (!spells) return
         spells.forEach((s) => {
             const img = new Image()
-            img.src = `/api/image/${s.id}`
+            img.src = s.iconUrl
         })
     }, [spells])
 
