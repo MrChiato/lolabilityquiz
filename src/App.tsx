@@ -263,6 +263,7 @@ export default function App() {
             backgroundColor: 'rgba(0,0,0,0.7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 1000,
+            overflowX: 'hidden',
           }}
         >
           <div
@@ -276,6 +277,7 @@ export default function App() {
               maxHeight: '90vh',
               overflowY: 'auto',
               textAlign: 'center',
+              boxSizing: 'border-box',
             }}
           >
             <h2 style={{ marginBottom: '0.5rem' }}>Game Over</h2>
@@ -299,9 +301,11 @@ export default function App() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(5, 1fr)',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
                     gap: 12,
                     marginTop: 16,
+                    overflowX: 'auto', 
+                    paddingBottom: 8,
                   }}
                 >
                   {wrongSpells.map(spellname => {
