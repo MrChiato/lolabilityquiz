@@ -5,7 +5,6 @@ import {
     KeyboardEvent,
     useRef,
     useMemo,
-    useLayoutEffect,
 } from 'react';
 import Fuse from 'fuse.js';
 import { useAllSpells } from '../hooks/useAllSpells';
@@ -19,8 +18,10 @@ export type Spell = {
     description: string;
 };
 
+export type Mode = 'baby' | 'easy' | 'medium' | 'hard';
+
 type IconQuizProps = {
-    onGameOver: (finalScore: number, mode: 'easy' | 'medium' | 'hard') => void
+    onGameOver: (finalScore: number, mode: Mode, guesses: Guess[]) => void
 };
 
 export default function IconQuiz({ onGameOver }: IconQuizProps) {
@@ -29,7 +30,8 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(10);
     const [guess, setGuess] = useState('');
-    const pendingGuesses = useRef<Guess[]>([])
+    const pendingGuesses = useRef<Guess[]>([]);
+    const [answered, setAnswered] = useState(false);
 
     const spells = useAllSpells();
     const allNames = useMemo(() => {
@@ -50,12 +52,20 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
     type QuizItem = { spell: Spell; rotation: number }
     const [item, setItem] = useState<QuizItem | null>(null)
 
-    const [lockMode, setLockMode] = useState<'easy' | 'medium' | 'hard' | null>(null);
-    const [mode, setMode] = useState<'easy' | 'medium' | 'hard'>('easy');
+    const [mode, setMode] = useState<Mode>(() => {
+        return (localStorage.getItem('quizMode') as Mode) || 'easy'
+    })
+    const [lockMode, setLockMode] = useState<Mode | null>(null);
+    const [babyOptions, setBabyOptions] = useState<string[]>([])
+    const [babyDisabled, setBabyDisabled] = useState<Set<string>>(new Set());
     const m = lockMode ?? mode;
     const lockIt = () => {
         if (!lockMode) setLockMode(mode);
     };
+
+    useEffect(() => {
+        localStorage.setItem('quizMode', mode)
+    }, [mode])
 
     const [messages, setMessages] = useState<
         Array<{ id: number; text: string; type: 'correct' | 'wrong' | 'reveal'; x: number }>
@@ -87,11 +97,51 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
         pickNextSpell();
     }, [spells]);
 
+    const handleBabyGuess = (value: string) => {
+        if (lives <= 0 || answered) return;
+        if (!lockMode) lockIt()
+        if (lives <= 0) return;
+        const correct = item!.spell.names[0];
+        if (value === correct) {
+            spawnMessage(correct, 'correct');
+            pendingGuesses.current.push({ spellname: correct, userguess: value, iscorrect: true });
+            setScore(s => s + 1);
+            pickNextSpell();
+        } else {
+            spawnMessage(value, 'wrong');
+            pendingGuesses.current.push({ spellname: correct, userguess: value, iscorrect: false });
+            setLives(l => l - 1);
+            setBabyDisabled(d => new Set(d).add(value));
+        }
+    };
+
+    const generateBabyOptions = (primary: string): string[] => {
+        const raw = fuse.search(primary).map(r => r.item)
+        const wrongs = Array.from(new Set(
+            raw.filter(n => n !== primary).slice(0, 3)
+        ))
+
+        while (wrongs.length < 3) {
+            const pick = allNames[Math.floor(Math.random() * allNames.length)]
+            if (pick !== primary && !wrongs.includes(pick)) {
+                wrongs.push(pick)
+            }
+        }
+
+        const opts = [primary, ...wrongs]
+        for (let i = opts.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+                ;[opts[i], opts[j]] = [opts[j], opts[i]]
+        }
+
+        return opts
+    }
+
     const pickNextSpell = () => {
         if (!spells) return;
         const remaining = spells.filter((s) => !usedIcons.has(s.iconUrl));
         if (remaining.length === 0) {
-            onGameOver(score, lockMode!);
+            onGameOver(score, lockMode!, pendingGuesses.current);
             return;
         }
 
@@ -112,11 +162,20 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
         const angle = [0, 90, 180, 270][Math.floor(Math.random() * 4)]
 
         setItem({ spell: choice, rotation: angle })
+        setAnswered(false);
 
         setWrongs([]);
         setUsedIcons((prev) => new Set(prev).add(choice.iconUrl));
+
+        if (m === 'baby') {
+            const primary = choice.names[0]
+            setBabyOptions(generateBabyOptions(primary))
+        } else {
+            setBabyOptions([])
+        }
         setAvailNames(allNames);
         setGuess('');
+        setBabyDisabled(new Set());
 
         const items = remaining.map((spell, idx) => ({
             spell,
@@ -135,6 +194,17 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
     };
 
     useEffect(() => {
+        if (!item) return;
+        if (mode === 'baby') {
+            const primary = item.spell.names[0];
+            setBabyOptions(generateBabyOptions(primary));
+            setBabyDisabled(new Set());
+        } else {
+            setBabyOptions([]);
+        }
+    }, [item, mode]);
+
+    useEffect(() => {
         if (wrongs.length >= 3 && item) {
             setLives((l) => l - 1);
             spawnMessage(spell.names[0], 'reveal');
@@ -146,11 +216,12 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
         if (lives <= 0 && item) {
             spawnMessage(spell.names[0], 'wrong');
             recordGuessBatch(pendingGuesses.current)
-            onGameOver(score, lockMode!);
+            onGameOver(score, lockMode!, pendingGuesses.current);
         }
     }, [lives, item]);
 
     const makeGuess = (value: string) => {
+        if (lives <= 0 || answered) return;
         if (lives <= 0) return
         if (!lockMode) lockIt();
         if (!item) return;
@@ -223,29 +294,6 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
         .filter((n) => availNames.includes(n))
         .slice(0, 10);
 
-    useLayoutEffect(() => {
-        if (suggestions.length > 0) {
-            document.body.style.overflow = 'hidden';
-            document.body.style.touchAction = 'none';
-        } else {
-            document.body.style.overflow = '';
-            document.body.style.touchAction = '';
-        }
-    }, [suggestions.length]);
-
-    // 2) Capture touch on the <ul> so it never bubbles up
-    useLayoutEffect(() => {
-        const el = listRef.current;
-        if (!el) return;
-        const handler = (e: TouchEvent) => e.stopPropagation();
-        el.addEventListener('touchstart', handler, { passive: false });
-        el.addEventListener('touchmove', handler, { passive: false });
-        return () => {
-            el.removeEventListener('touchstart', handler);
-            el.removeEventListener('touchmove', handler);
-        };
-    }, [listRef, suggestions.length]);
-
     useEffect(() => {
         setHighlighted(-1);
     }, [suggestions.length]);
@@ -277,7 +325,7 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
                     Guess the ability name
                 </h1>
                 <div style={{ marginBottom: 16 }}>
-                    {(['easy', 'medium', 'hard'] as const).map((m) => (
+                    {(['baby', 'easy', 'medium', 'hard'] as const).map((m) => (
                         <button
                             key={m}
                             onClick={() => lockMode || setMode(m)}
@@ -318,7 +366,7 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
                             height: 96,
                             objectFit: 'contain',
                             marginBottom: 16,
-                            transform: m !== 'easy' ? `rotate(${rotation}deg)` : undefined,
+                            transform: m !== 'easy' && m !== 'baby' ? `rotate(${rotation}deg)` : undefined,
                             filter: m === 'hard' ? 'grayscale(100%)' : undefined,
                         }}
                     />
@@ -349,7 +397,7 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
                     ))}
                 </div>
 
-                <div style={{ minHeight: 48, marginBottom: 16 }}>
+                <div style={{ marginBottom: 16 }}>
                     {wrongs.length >= 1 && (
                         <p style={{ color: '#bbb', fontSize: 16, margin: 0 }}>
                             <strong>Hint:</strong> {spell.hint}
@@ -367,68 +415,105 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
                         </p>
                     )}
                 </div>
-
-                <div style={{ position: 'relative', marginBottom: 16 }}>
-                    <input
-                        type="text"
-                        placeholder="Type to guess…"
-                        value={guess}
-                        onChange={onInputChange}
-                        onKeyDown={onKeyDown}
+                {m === 'baby' ? (
+                    <div
                         style={{
-                            width: '100%',
-                            padding: 12,
-                            fontSize: 16,
-                            borderRadius: 6,
-                            border: '1px solid #444',
-                            backgroundColor: '#1e1e1e',
-                            color: '#eee',
-                            boxSizing: 'border-box',
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: 8,
+                            marginBottom: 16,
                         }}
-                        autoFocus
-                    />
-                    {suggestions.length > 0 && (
-                        <ul
-                            ref={listRef}
+                    >
+                        {babyOptions.map(opt => (
+                            <button
+                                key={opt}
+                                onClick={() => handleBabyGuess(opt)}
+                                disabled={lives <= 0 || babyDisabled.has(opt)}
+                                style={{
+                                    height: 60,
+                                    lineHeight: '1.2em',
+                                    overflow: 'hidden',
+                                    textAlign: 'center',
+                                    wordBreak: 'break-word',
+
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+
+                                    borderRadius: 6,
+                                    border: babyDisabled.has(opt) ? '1px solid #666' : '1px solid #444',
+                                    backgroundColor: babyDisabled.has(opt) ? '#555' : '#222',
+                                    color: '#eee',
+                                    cursor: lives > 0 ? 'pointer' : 'not-allowed',
+                                }}
+                            >
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div style={{ position: 'relative', marginBottom: 16 }}>
+                        <input
+                            type="text"
+                            placeholder="Type to guess…"
+                            value={guess}
+                            onChange={onInputChange}
+                            onKeyDown={onKeyDown}
                             style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                right: 0,
-                                maxHeight: 150,
-                                overflowY: 'auto',
-                                WebkitOverflowScrolling: 'touch',
-                                overscrollBehaviorY: 'contain',
-                                touchAction: 'pan-y',
-                                backgroundColor: '#1e1e1e',
+                                width: '75%',
+                                padding: 12,
+                                fontSize: 16,
+                                borderRadius: 6,
                                 border: '1px solid #444',
-                                borderTop: 'none',
-                                borderRadius: '0 0 6px 6px',
-                                margin: 0,
-                                padding: 0,
-                                listStyle: 'none',
-                                zIndex: 10,
+                                backgroundColor: '#1e1e1e',
+                                color: '#eee',
+                                boxSizing: 'border-box',
                             }}
-                        >
-                            {suggestions.map((n, i) => (
-                                <li
-                                    key={n}
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => makeGuess(n)}
-                                    style={{
-                                        padding: '8px',
-                                        cursor: 'pointer',
-                                        fontSize: 16,
-                                        backgroundColor:
-                                            i === highlighted ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                    }}
-                                >
-                                    {n}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
+                            autoFocus
+                        />
+                        {suggestions.length > 0 && (
+                            <ul
+                                ref={listRef}
+                                style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    right: 0,
+                                    maxHeight: 150,
+                                    overflowY: 'auto',
+                                    WebkitOverflowScrolling: 'touch',
+                                    overscrollBehaviorY: 'contain',
+                                    touchAction: 'pan-y',
+                                    backgroundColor: '#1e1e1e',
+                                    border: '1px solid #444',
+                                    borderTop: 'none',
+                                    borderRadius: '0 0 6px 6px',
+                                    margin: 0,
+                                    padding: 0,
+                                    listStyle: 'none',
+                                    zIndex: 10,
+                                }}
+                            >
+                                {suggestions.map((n, i) => (
+                                    <li
+                                        key={n}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => makeGuess(n)}
+                                        style={{
+                                            padding: '8px',
+                                            cursor: 'pointer',
+                                            fontSize: 16,
+                                            backgroundColor:
+                                                i === highlighted ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                        }}
+                                    >
+                                        {n}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
 
                 <button
                     onClick={onPass}

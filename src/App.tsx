@@ -1,39 +1,56 @@
-import { useState } from 'react';
-import IconQuiz from './components/IconQuiz';
+import { useMemo, useState } from 'react';
+import IconQuiz, { Spell } from './components/IconQuiz';
 import Leaderboards from './components/Leaderboard';
 import NameModal from './components/NameModal';
 import DataPage from './pages/DataPage';
-import { fetchLeaderboard, recordFeedback, submitScore } from './lib/supabase';
+import { fetchLeaderboard, Guess, recordFeedback, submitScore } from './lib/supabase';
 import { Routes, Route, NavLink } from 'react-router-dom'
 import AdminPage from './pages/AdminPage';
 import FeedbackModal from './components/FeedbackModal';
+import { Mode } from './components/IconQuiz';
+import { useAllSpells } from './hooks/useAllSpells';
 
 export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingScore, setPendingScore] = useState(0);
   const [quizKey, setQuizKey] = useState(0);
-  const [quizMode, setQuizMode] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [quizMode, setQuizMode] = useState<Mode>('easy');
   const [isFeedbackOpen, setFeedbackOpen] = useState(false)
-  const [gameOverInfo, setGameOverInfo] = useState<{
+  const [storedGuesses, setStoredGuesses] = useState<Guess[]>([])
+  type GameOverInfo = {
     finalScore: number;
     bestScore: number;
-    mode: 'easy' | 'medium' | 'hard';
-  } | null>(null);
+    mode: Mode;
+    guesses: Guess[];
+  }
+  const [gameOverInfo, setGameOverInfo] = useState<GameOverInfo | null>(null);
+
+  const spells = useAllSpells()
+  const nameToIconUrl = useMemo(() => {
+    if (!spells) return {} as Record<string, string>
+    const m: Record<string, string> = {}
+    spells.forEach((s: Spell) => {
+      s.names.forEach(n => m[n] = s.iconUrl)
+    })
+    return m
+  }, [spells])
 
   const bumpQuizKey = () => setQuizKey((k) => k + 1);
 
   const handleGameOver = (
     finalScore: number,
-    mode: 'easy' | 'medium' | 'hard'
+    mode: Mode,
+    guesses: Guess[]
   ) => {
     setQuizMode(mode);
+    setStoredGuesses(guesses);
     const keyScore = `lolQuizHighScorev2_${mode}`;
     const stored = parseInt(localStorage.getItem(keyScore) || '0', 10);
     if (finalScore > stored) {
       setPendingScore(finalScore);
       setModalOpen(true);
     } else {
-      setGameOverInfo({ finalScore, bestScore: stored, mode });
+      setGameOverInfo({ finalScore, bestScore: stored, mode, guesses });
     }
   };
 
@@ -48,6 +65,12 @@ export default function App() {
       await submitScore(clean, pendingScore, quizMode);
       await fetchLeaderboard(quizMode);
       setModalOpen(false);
+      setGameOverInfo({
+        finalScore: pendingScore,
+        bestScore: pendingScore,
+        mode: quizMode,
+        guesses: storedGuesses,
+      });
     } catch (error) {
       console.error(error);
     }
@@ -150,6 +173,7 @@ export default function App() {
             finalScore: pendingScore,
             bestScore: pendingScore,
             mode: quizMode,
+            guesses: storedGuesses,
           });
         }}
       />
@@ -231,37 +255,126 @@ export default function App() {
       )}
 
       {gameOverInfo && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0,
-          width: '100vw', height: '100vh',
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: '#1e1e1e',
-            color: '#eee',
-            padding: '2rem',
-            borderRadius: 8,
-            width: '90%',
-            maxWidth: 360,
-            textAlign: 'center',
-          }}>
-            <h2 style={{ marginBottom: '1rem' }}>Game Over</h2>
-            <p style={{ margin: '0.5rem 0' }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0,
+            width: '100vw', height: '100vh',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#1e1e1e',
+              color: '#eee',
+              padding: '2rem',
+              borderRadius: 8,
+              width: '90%',
+              maxWidth: 600,
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              textAlign: 'center',
+            }}
+          >
+            <h2 style={{ marginBottom: '0.5rem' }}>Game Over</h2>
+            <p style={{ margin: '0.25rem 0' }}>
               Final score: <strong>{gameOverInfo.finalScore}</strong>
             </p>
-            <p style={{ margin: '0.5rem 0' }}>
+            <p style={{ margin: '0.25rem 0' }}>
               Best for <em>{gameOverInfo.mode}</em>: <strong>{gameOverInfo.bestScore}</strong>
             </p>
+
+            {(() => {
+              const all = gameOverInfo.guesses;
+              const wrongSpells = Array.from(
+                new Set(
+                  all
+                    .filter(g => !g.iscorrect)
+                    .map(g => g.spellname)
+                )
+              );
+              return wrongSpells.length > 0 ? (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(5, 1fr)',
+                    gap: 12,
+                    marginTop: 16,
+                  }}
+                >
+                  {wrongSpells.map(spellname => {
+                    const attempts = all
+                      .filter(g => g.spellname === spellname && !g.iscorrect)
+                      .map(g => g.userguess || '–');
+
+                    return (
+                      <div
+                        key={spellname}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          padding: 8,
+                          background: '#282828',
+                          borderRadius: 6,
+                        }}
+                      >
+                        <img
+                          src={nameToIconUrl[spellname]}
+                          width={48}
+                          height={48}
+                          alt={spellname}
+                          style={{ marginBottom: 8 }}
+                        />
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            width: '100%',
+                          }}
+                        >
+                          {attempts.map((txt, i) => (
+                            <span
+                              key={i}
+                              style={{
+                                fontSize: 14,
+                                color: txt === '–' ? '#888' : '#E74C3C',
+                                borderBottom: '1px solid #444',
+                                padding: '2px 0',
+                              }}
+                            >
+                              {txt}
+                            </span>
+                          ))}
+                          <span
+                            style={{
+                              fontSize: 14,
+                              color: '#4CAF50',
+                              padding: '4px 0',
+                              marginTop: 4,
+                              borderTop: '1px solid #444',
+                            }}
+                          >
+                            {spellname}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null;
+            })()}
+
             <button
               onClick={() => {
                 setGameOverInfo(null);
                 bumpQuizKey();
               }}
               style={{
-                marginTop: '1rem',
+                marginTop: '1.5rem',
                 padding: '0.5rem 1rem',
                 fontSize: '1rem',
                 borderRadius: 4,

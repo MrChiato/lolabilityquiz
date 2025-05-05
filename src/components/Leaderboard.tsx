@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchLeaderboard } from '../lib/supabase';
 import LeaderboardModal from './LeaderboardModal';
 
-const MODES = ['easy', 'medium', 'hard'] as const;
+const MODES = ['baby', 'easy', 'medium', 'hard'] as const;
 
 type ScoreRow = { name: string; score: number };
 

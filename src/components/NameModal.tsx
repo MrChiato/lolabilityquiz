@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Mode } from './IconQuiz';
 
 type NameModalProps = {
     isOpen: boolean;
     initialName?: string;
     title?: string;
     score: number;
-    mode: 'easy' | 'medium' | 'hard';
+    mode: Mode | null;
     onSubmit: (name: string) => void;
     onClose: () => void;
 };
