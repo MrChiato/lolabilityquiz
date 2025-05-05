@@ -366,6 +366,8 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
                     {suggestions.length > 0 && (
                         <ul
                             ref={listRef}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onTouchMove={(e) => e.stopPropagation()}
                             style={{
                                 position: 'absolute',
                                 top: '100%',
@@ -373,6 +375,9 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
                                 right: 0,
                                 maxHeight: 150,
                                 overflowY: 'auto',
+                                WebkitOverflowScrolling: 'touch',
+                                overscrollBehaviorY: 'contain',
+                                touchAction: 'pan-y',
                                 backgroundColor: '#1e1e1e',
                                 border: '1px solid #444',
                                 borderTop: 'none',
