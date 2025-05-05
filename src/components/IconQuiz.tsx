@@ -5,6 +5,7 @@ import {
     KeyboardEvent,
     useRef,
     useMemo,
+    useLayoutEffect,
 } from 'react';
 import Fuse from 'fuse.js';
 import { useAllSpells } from '../hooks/useAllSpells';
@@ -222,6 +223,29 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
         .filter((n) => availNames.includes(n))
         .slice(0, 10);
 
+    useLayoutEffect(() => {
+        if (suggestions.length > 0) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+        }
+    }, [suggestions.length]);
+
+    // 2) Capture touch on the <ul> so it never bubbles up
+    useLayoutEffect(() => {
+        const el = listRef.current;
+        if (!el) return;
+        const handler = (e: TouchEvent) => e.stopPropagation();
+        el.addEventListener('touchstart', handler, { passive: false });
+        el.addEventListener('touchmove', handler, { passive: false });
+        return () => {
+            el.removeEventListener('touchstart', handler);
+            el.removeEventListener('touchmove', handler);
+        };
+    }, [listRef, suggestions.length]);
+
     useEffect(() => {
         setHighlighted(-1);
     }, [suggestions.length]);
@@ -366,8 +390,6 @@ export default function IconQuiz({ onGameOver }: IconQuizProps) {
                     {suggestions.length > 0 && (
                         <ul
                             ref={listRef}
-                            onTouchStart={(e) => e.stopPropagation()}
-                            onTouchMove={(e) => e.stopPropagation()}
                             style={{
                                 position: 'absolute',
                                 top: '100%',
